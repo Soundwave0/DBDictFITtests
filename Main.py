@@ -2,7 +2,7 @@ import oracledb
 
 import credentials
 
-
+oracledb.defaults.fetch_lobs = False
 class DBJsonFunctions:
     @staticmethod
     def connect_to_db():
@@ -35,7 +35,7 @@ def execute_query_with_results(connection, query, params=None):
             return results, columns
         else:
             # For INSERT/UPDATE/DELETE, commit changes
-            connection.commit()
+           # connection.commit()
             return cursor.rowcount, None
 
     except Exception as e:
@@ -54,7 +54,7 @@ def execute_query_no_results(connection, query, params=None):
             cursor.execute(query, params)
         else:
             cursor.execute(query)
-        connection.commit()
+        #connection.commit()
         return cursor.rowcount
     except Exception as e:
         connection.rollback()
@@ -100,7 +100,7 @@ def execute_query_to_dict(connection, query: str, params=None) -> List[Dict[str,
                 columns = [col[0] for col in cursor.description]
                 return results_to_dict_list(results, columns)
             else:
-                connection.commit()
+                #connection.commit()
                 return [{"rows_affected": cursor.rowcount}]
 
     except Exception as e:
@@ -125,7 +125,7 @@ def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFr
                 columns = [col[0] for col in cursor.description]
                 return results_to_dataframe(results, columns)
             else:
-                connection.commit()
+                #connection.commit()
                 return pd.DataFrame({"rows_affected": [cursor.rowcount]})
 
     except Exception as e:
@@ -133,9 +133,37 @@ def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFr
         print(f"Query execution error: {e}")
         return pd.DataFrame()
 
+def select_data_instance(connection,test_instance_id,trial)->dict:
+    query_select_data_instance = f"SELECT DATA FROM DATA_INSTANCE WHERE test_instance_id = {test_instance_id} AND TRIAL = {trial}"
+    result = execute_query_to_dict(DBJsonFunctions.connect_to_db(), query_select_data_instance)
+    return result
+def select_test_instance_with_data(test_instance_id):
+    # Get test instance config - returns list of dicts
+    query_select_test_instance_config = f"SELECT CONFIG FROM TEST_INSTANCE WHERE ID = {test_instance_id}"
+    test_instance_config_list = execute_query_to_dict(DBJsonFunctions.connect_to_db(),
+                                                      query_select_test_instance_config)
 
-if __name__ == '__main__': #function to show examples
-    # Connect to the database
+    # Get data instances - returns list of dicts
+    data_instance_query = f"SELECT * FROM DATA_INSTANCE WHERE TEST_INSTANCE_ID = {test_instance_id}"
+    data_instance_list = execute_query_to_dict(DBJsonFunctions.connect_to_db(), data_instance_query)
+
+    params_query = f"SELECT TEST_PARAMETERS FROM TEST_TYPE WHERE ID = (SELECT TEST_TYPE_ID FROM TEST_INSTANCE WHERE id = {test_instance_id})"
+    params_result = execute_query_to_dict(DBJsonFunctions.connect_to_db(), params_query)
+    # Extract the first (and should be only) config dictionary
+    if test_instance_config_list:
+        config_dict = test_instance_config_list[0]  # Get first config dict
+    else:
+        config_dict = {}  # Empty dict if no config found
+
+    # Merge with data list nested under "data" key
+    merged_dict = {
+        **config_dict,
+        **params_result[0],# Unpack the config dictionary
+        "data": data_instance_list  # Nest the entire data list
+    }
+
+    return merged_dict
+def connect_execute(query: str):
     try:
         dbconnection = DBJsonFunctions.connect_to_db()
 
@@ -144,30 +172,21 @@ if __name__ == '__main__': #function to show examples
             cursor = dbconnection.cursor()
 
             # Execute your query
-            cursor.execute("SELECT * FROM device_instance")
+            cursor.execute(query)
             results = cursor.fetchall()
             columns = [col[0] for col in cursor.description]
-            dictionary = results_to_dict_list(results, columns)
-            dataframe = results_to_dataframe(results, columns)
-            print("--------------------------------")
-            print(dictionary)
-            print("--------------------------------")
-            print(f"Columns: {columns}")
-            for row in results:
-                print(row)
-            print("-------------------------------")
-            print(dataframe)
-
-            # Close cursor and connection
+            datadictionary = results_to_dict_list(results, columns)
             cursor.close()
             dbconnection.close()
-
+            return datadictionary
         else:
             print("Unable to connect to database")
 
     except Exception as e:
         print(f"Error: {e}")
+if __name__ == '__main__': #function to show examples
 
+    print(select_test_instance_with_data(1))
 
 
 
