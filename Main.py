@@ -134,7 +134,7 @@ def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFr
         return pd.DataFrame()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': #function to show examples
     # Connect to the database
     try:
         dbconnection = DBJsonFunctions.connect_to_db()
