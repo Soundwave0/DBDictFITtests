@@ -64,6 +64,75 @@ def execute_query_no_results(connection, query, params=None):
         cursor.close()
 
 
+import pandas as pd
+from typing import List, Dict, Any, Optional, Tuple
+
+
+def results_to_dict_list(results: List[Tuple], columns: List[str]) -> List[Dict[str, Any]]:
+
+    if not results or not columns:
+        return []
+
+    return [dict(zip(columns, row)) for row in results]
+
+
+def results_to_dataframe(results: List[Tuple], columns: List[str]) -> pd.DataFrame:
+
+    if not results or not columns:
+        return pd.DataFrame()
+
+    return pd.DataFrame(results, columns=columns)
+
+
+def execute_query_to_dict(connection, query: str, params=None) -> List[Dict[str, Any]]:
+    """
+    Execute query and return results as list of dictionaries.
+    """
+    try:
+        with connection.cursor() as cursor:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+
+            if query.strip().upper().startswith('SELECT'):
+                results = cursor.fetchall()
+                columns = [col[0] for col in cursor.description]
+                return results_to_dict_list(results, columns)
+            else:
+                connection.commit()
+                return [{"rows_affected": cursor.rowcount}]
+
+    except Exception as e:
+        connection.rollback()
+        print(f"Query execution error: {e}")
+        return []
+
+
+def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFrame:
+    """
+    Execute query and return results as pandas DataFrame.
+    """
+    try:
+        with connection.cursor() as cursor:
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+
+            if query.strip().upper().startswith('SELECT'):
+                results = cursor.fetchall()
+                columns = [col[0] for col in cursor.description]
+                return results_to_dataframe(results, columns)
+            else:
+                connection.commit()
+                return pd.DataFrame({"rows_affected": [cursor.rowcount]})
+
+    except Exception as e:
+        connection.rollback()
+        print(f"Query execution error: {e}")
+        return pd.DataFrame()
+
 
 if __name__ == '__main__':
     # Connect to the database
@@ -76,16 +145,18 @@ if __name__ == '__main__':
 
             # Execute your query
             cursor.execute("SELECT * FROM device_instance")
-
-            # Fetch results
             results = cursor.fetchall()
-
-            # Get column names
             columns = [col[0] for col in cursor.description]
-
+            dictionary = results_to_dict_list(results, columns)
+            dataframe = results_to_dataframe(results, columns)
+            print("--------------------------------")
+            print(dictionary)
+            print("--------------------------------")
             print(f"Columns: {columns}")
             for row in results:
                 print(row)
+            print("-------------------------------")
+            print(dataframe)
 
             # Close cursor and connection
             cursor.close()
