@@ -35,7 +35,7 @@ def execute_query_with_results(connection, query, params=None):
             return results, columns
         else:
             # For INSERT/UPDATE/DELETE, commit changes
-           # connection.commit()
+            connection.commit()
             return cursor.rowcount, None
 
     except Exception as e:
@@ -54,7 +54,7 @@ def execute_query_no_results(connection, query, params=None):
             cursor.execute(query, params)
         else:
             cursor.execute(query)
-        #connection.commit()
+        connection.commit()
         return cursor.rowcount
     except Exception as e:
         connection.rollback()
@@ -100,7 +100,7 @@ def execute_query_to_dict(connection, query: str, params=None) -> List[Dict[str,
                 columns = [col[0] for col in cursor.description]
                 return results_to_dict_list(results, columns)
             else:
-                #connection.commit()
+                connection.commit()
                 return [{"rows_affected": cursor.rowcount}]
 
     except Exception as e:
@@ -125,7 +125,7 @@ def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFr
                 columns = [col[0] for col in cursor.description]
                 return results_to_dataframe(results, columns)
             else:
-                #connection.commit()
+                connection.commit()
                 return pd.DataFrame({"rows_affected": [cursor.rowcount]})
 
     except Exception as e:
@@ -133,7 +133,7 @@ def execute_query_to_dataframe(connection, query: str, params=None) -> pd.DataFr
         print(f"Query execution error: {e}")
         return pd.DataFrame()
 
-def select_data_instance(connection,test_instance_id,trial)->dict:
+def select_data_instance(test_instance_id,trial)->dict:
     query_select_data_instance = f"SELECT DATA FROM DATA_INSTANCE WHERE test_instance_id = {test_instance_id} AND TRIAL = {trial}"
     result = execute_query_to_dict(DBJsonFunctions.connect_to_db(), query_select_data_instance)
     return result
@@ -187,7 +187,7 @@ def connect_execute(query: str):
 if __name__ == '__main__': #function to show examples
 
     print(select_test_instance_with_data(1))
-
+    print(select_data_instance())
 
 
     #
