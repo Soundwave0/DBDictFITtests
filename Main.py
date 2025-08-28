@@ -187,7 +187,7 @@ def connect_execute(query: str):
 if __name__ == '__main__': #function to show examples
 
     print(select_test_instance_with_data(1))
-    print(select_data_instance())
+    print(select_data_instance(1,3))
 
 
     #
